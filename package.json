@@ -1,0 +1,32 @@
+{
+  "name": "blog-app",
+  "version": "1.0.0",
+  "description": "MERN Stack Blog Application",
+  "main": "index.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "server": "nodemon backend/server.js",
+    "client": "cd frontend && npm start",
+    "install-client": "cd frontend && npm install",
+    "install-server": "cd backend && npm install",
+    "install": "npm run install-server && npm run install-client",
+    "build": "cd frontend && npm run build",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "heroku-postbuild": "NPM_CONFIG_PRODUCTION=false npm run install-client && npm run build"
+  },
+  "keywords": [
+    "mern",
+    "blog",
+    "react",
+    "node",
+    "mongodb"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "concurrently": "^8.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+} 

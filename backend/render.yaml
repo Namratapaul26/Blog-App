@@ -2,6 +2,7 @@ services:
   - type: web
     name: blog-app-backend
     env: node
+    region: frankfurt
     buildCommand: npm install
     startCommand: node server.js
     envVars:
@@ -13,4 +14,5 @@ services:
         sync: false
       - key: FRONTEND_URL
         sync: false
-    healthCheckPath: /health 
+    healthCheckPath: /health
+    autoDeploy: true 
