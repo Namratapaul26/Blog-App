@@ -30,16 +30,19 @@ const BlogDetail = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const token = localStorage.getItem('token');
+  const user = token ? JSON.parse(atob(token.split('.')[1])).user : null;
+  const isAuthor = blog?.author?._id === user?.id;
+
+  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+  const BASE_URL = API_URL.replace('/api', '');
 
   useEffect(() => {
     const fetchBlog = async () => {
       try {
-        if (!id) return;
-        const blogData = await blogAPI.getBlog(id);
-        setBlog(blogData);
+        const data = await blogAPI.getBlog(id);
+        setBlog(data);
       } catch (err) {
-        console.error('Error fetching blog:', err);
-        setError(err.response?.data?.message || 'An error occurred while fetching the blog');
+        setError(err.message || 'Error fetching blog');
       } finally {
         setLoading(false);
       }
@@ -139,8 +142,6 @@ const BlogDetail = () => {
     );
   }
 
-  const isAuthor = token && blog.author._id === JSON.parse(atob(token.split('.')[1])).user.id;
-
   return (
     <Container maxWidth="md">
       <Box sx={{ mt: 4 }}>
@@ -149,7 +150,7 @@ const BlogDetail = () => {
           {blog.coverImage && (
             <Box sx={{ mb: 4, borderRadius: 1, overflow: 'hidden' }}>
               <img
-                src={`http://localhost:5000${blog.coverImage}`}
+                src={`${BASE_URL}${blog.coverImage}`}
                 alt={blog.title}
                 style={{
                   width: '100%',
@@ -164,7 +165,7 @@ const BlogDetail = () => {
             {blog.title}
           </Typography>
           <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-            By {blog.author.name} • {new Date(blog.createdAt).toLocaleDateString()}
+            By {blog.author?.name || 'Unknown'} • {new Date(blog.createdAt).toLocaleDateString()}
           </Typography>
           <Divider sx={{ my: 2 }} />
           
@@ -183,7 +184,7 @@ const BlogDetail = () => {
                 {blog.contentImages.map((image, index) => (
                   <ImageListItem key={index}>
                     <img
-                      src={`http://localhost:5000${image}`}
+                      src={`${BASE_URL}${image}`}
                       alt={`Blog content ${index + 1}`}
                       loading="lazy"
                       style={{

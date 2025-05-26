@@ -3,11 +3,15 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const connectDB = require('./config/db');
+const { uploadsPath, createUploadsDirectory } = require('./config/storage');
 
 const app = express();
 
 // Connect to MongoDB Atlas
 connectDB();
+
+// Ensure uploads directory exists
+createUploadsDirectory();
 
 // Middleware
 app.use(cors({
@@ -21,7 +25,7 @@ app.use(cors({
 app.use(express.json());
 
 // Serve uploaded files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(uploadsPath));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
