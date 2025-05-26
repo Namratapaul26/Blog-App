@@ -49,9 +49,21 @@ router.post('/', [
   ]
 ], async (req, res) => {
   try {
+    // Log the request details
+    console.log('Create Blog Request:', {
+      body: req.body,
+      files: req.files,
+      user: req.user,
+      headers: req.headers
+    });
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      console.log('Validation errors:', errors.array());
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: errors.array() 
+      });
     }
 
     const newBlog = new Blog({
@@ -73,9 +85,32 @@ router.post('/', [
     const blog = await newBlog.save();
     await blog.populate('author', 'name');
     
+    // Log the created blog
+    console.log('Blog created successfully:', {
+      id: blog._id,
+      title: blog.title,
+      author: blog.author,
+      coverImage: blog.coverImage,
+      contentImages: blog.contentImages
+    });
+
     res.json(blog);
   } catch (err) {
-    console.error('Error creating blog:', err);
+    console.error('Error creating blog:', {
+      error: err.message,
+      stack: err.stack,
+      body: req.body,
+      files: req.files
+    });
+    
+    // Handle specific error cases
+    if (err.name === 'ValidationError') {
+      return res.status(400).json({ 
+        message: 'Validation failed',
+        errors: Object.values(err.errors).map(e => ({ msg: e.message }))
+      });
+    }
+    
     res.status(500).json({ 
       message: 'Error creating blog',
       error: err.message 

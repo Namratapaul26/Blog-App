@@ -33,12 +33,19 @@ api.interceptors.request.use(
       config.headers['x-auth-token'] = token;
     }
 
-    // Log request details in development
+    // For FormData, let the browser set the Content-Type
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+
+    // Log request details
     console.log('API Request:', {
       url: config.url,
       method: config.method,
       baseURL: config.baseURL,
       headers: config.headers,
+      isFormData: config.data instanceof FormData,
+      token: token ? 'present' : 'not present'
     });
 
     return config;
@@ -65,7 +72,8 @@ api.interceptors.response.use(
       method: error.config?.method,
       status: error.response?.status,
       data: error.response?.data,
-      message: error.message
+      message: error.message,
+      headers: error.config?.headers
     });
     throw error;
   }
@@ -142,16 +150,21 @@ export const blogAPI = {
 
   createBlog: async (blogData) => {
     try {
-      const response = await api.post('/blogs', blogData, {
-        headers: {
-          'Content-Type': blogData instanceof FormData ? 'multipart/form-data' : 'application/json'
+      // Log the FormData contents for debugging
+      if (blogData instanceof FormData) {
+        console.log('FormData contents:');
+        for (let [key, value] of blogData.entries()) {
+          console.log(key, value instanceof File ? value.name : value);
         }
-      });
+      }
+
+      const response = await api.post('/blogs', blogData);
       return response.data;
     } catch (error) {
       console.error('Create Blog Error:', {
         message: error.message,
-        response: error.response?.data
+        response: error.response?.data,
+        status: error.response?.status
       });
       throw error;
     }
@@ -159,11 +172,7 @@ export const blogAPI = {
 
   updateBlog: async (id, blogData) => {
     try {
-      const response = await api.put(`/blogs/${id}`, blogData, {
-        headers: {
-          'Content-Type': blogData instanceof FormData ? 'multipart/form-data' : 'application/json'
-        }
-      });
+      const response = await api.put(`/blogs/${id}`, blogData);
       return response.data;
     } catch (error) {
       console.error('Update Blog Error:', {
