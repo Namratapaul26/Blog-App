@@ -4,6 +4,12 @@ const API_URL = process.env.NODE_ENV === 'production'
   ? process.env.REACT_APP_API_URL
   : 'http://localhost:5000/api';
 
+console.log('API Configuration:', {
+  environment: process.env.NODE_ENV,
+  apiUrl: API_URL,
+  baseUrl: API_URL ? API_URL.replace('/api', '') : null
+});
+
 // Create axios instance with base URL
 const api = axios.create({
   baseURL: API_URL,
@@ -28,13 +34,12 @@ api.interceptors.request.use(
     }
 
     // Log request details in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log('API Request:', {
-        url: config.url,
-        method: config.method,
-        headers: config.headers,
-      });
-    }
+    console.log('API Request:', {
+      url: config.url,
+      method: config.method,
+      baseURL: config.baseURL,
+      headers: config.headers,
+    });
 
     return config;
   },
@@ -46,56 +51,93 @@ api.interceptors.request.use(
 
 // Add response interceptor for error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('API Response:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    });
+    return response;
+  },
   (error) => {
-    if (error.response?.status === 500) {
-      console.error('Server Error (500):', {
-        url: error.config?.url,
-        method: error.config?.method,
-        headers: error.config?.headers,
-        data: error.config?.data,
-        response: error.response?.data,
-        status: error.response?.status,
-        message: error.response?.data?.message || error.message,
-      });
-    } else {
-      console.error('API Error:', {
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        message: error.response?.data?.message || error.message,
-      });
-    }
+    console.error('API Error:', {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
     throw error;
   }
 );
 
 export const authAPI = {
   login: async (credentials) => {
-    const response = await api.post('/auth/login', credentials);
-    return response.data;
+    try {
+      const response = await api.post('/auth/login', credentials);
+      return response.data;
+    } catch (error) {
+      console.error('Login Error:', {
+        message: error.message,
+        response: error.response?.data
+      });
+      throw error;
+    }
   },
 
   signup: async (credentials) => {
-    const response = await api.post('/auth/signup', credentials);
-    return response.data;
+    try {
+      const response = await api.post('/auth/signup', credentials);
+      return response.data;
+    } catch (error) {
+      console.error('Signup Error:', {
+        message: error.message,
+        response: error.response?.data
+      });
+      throw error;
+    }
   },
 
   getUser: async () => {
-    const response = await api.get('/auth/user');
-    return response.data;
+    try {
+      const response = await api.get('/auth/user');
+      return response.data;
+    } catch (error) {
+      console.error('Get User Error:', {
+        message: error.message,
+        response: error.response?.data
+      });
+      throw error;
+    }
   },
 };
 
 export const blogAPI = {
-  getBlogs: async (page = 1, limit = 10) => {
-    const response = await api.get(`/blogs?page=${page}&limit=${limit}`);
-    return response.data;
+  getBlogs: async () => {
+    try {
+      const response = await api.get('/blogs');
+      return response.data;
+    } catch (error) {
+      console.error('Get Blogs Error:', {
+        message: error.message,
+        response: error.response?.data
+      });
+      throw error;
+    }
   },
 
   getBlog: async (id) => {
-    const response = await api.get(`/blogs/${id}`);
-    return response.data;
+    try {
+      const response = await api.get(`/blogs/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Get Blog Error:', {
+        id,
+        message: error.message,
+        response: error.response?.data
+      });
+      throw error;
+    }
   },
 
   createBlog: async (blogData) => {
@@ -107,7 +149,10 @@ export const blogAPI = {
       });
       return response.data;
     } catch (error) {
-      console.error('Error in createBlog:', error);
+      console.error('Create Blog Error:', {
+        message: error.message,
+        response: error.response?.data
+      });
       throw error;
     }
   },
@@ -121,40 +166,24 @@ export const blogAPI = {
       });
       return response.data;
     } catch (error) {
-      console.error('Error in updateBlog:', error);
+      console.error('Update Blog Error:', {
+        id,
+        message: error.message,
+        response: error.response?.data
+      });
       throw error;
     }
   },
 
   deleteBlog: async (id) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
-      // Log the delete attempt
-      console.log('Attempting to delete blog:', {
-        id,
-        token: token ? 'Present' : 'Missing',
-      });
-
       const response = await api.delete(`/blogs/${id}`);
-      
-      // Log successful deletion
-      console.log('Blog deleted successfully:', {
-        id,
-        response: response.data,
-      });
-
       return response.data;
     } catch (error) {
-      // Log detailed error information
-      console.error('Error in deleteBlog:', {
+      console.error('Delete Blog Error:', {
         id,
-        error: error.response?.data || error.message,
-        status: error.response?.status,
-        stack: error.stack,
+        message: error.message,
+        response: error.response?.data
       });
       throw error;
     }
