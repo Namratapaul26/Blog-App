@@ -10,10 +10,14 @@ import {
   IconButton,
   Card,
   CardMedia,
+  Alert,
 } from '@mui/material';
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
 import AddPhotoAlternate from '@mui/icons-material/AddPhotoAlternate';
 import { blogAPI } from '../services/api';
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_CONTENT_IMAGES = 10;
 
 const BlogCreate = () => {
   const navigate = useNavigate();
@@ -26,8 +30,15 @@ const BlogCreate = () => {
   const [contentImages, setContentImages] = useState([]);
   const [contentImagePreviews, setContentImagePreviews] = useState([]);
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const coverImageInputRef = useRef(null);
   const contentImageInputRef = useRef(null);
+
+  const validateFileSize = (file) => {
+    if (file.size > MAX_FILE_SIZE) {
+      throw new Error(`File ${file.name} is too large. Maximum size is 5MB.`);
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -37,40 +48,73 @@ const BlogCreate = () => {
   };
 
   const handleCoverImageChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setCoverImage(file);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setCoverImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+    try {
+      if (e.target.files && e.target.files[0]) {
+        const file = e.target.files[0];
+        validateFileSize(file);
+        setCoverImage(file);
+        const reader = new FileReader();
+        reader.onload = () => {
+          setCoverImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    } catch (err) {
+      setError(err.message);
+      e.target.value = '';
     }
   };
 
   const handleContentImageChange = (e) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setContentImages((prev) => [...prev, ...files]);
-      
-      files.forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          setContentImagePreviews((prev) => [...prev, reader.result]);
-        };
-        reader.readAsDataURL(file);
-      });
+    try {
+      if (e.target.files) {
+        const files = Array.from(e.target.files);
+        
+        // Check total number of images
+        if (contentImages.length + files.length > MAX_CONTENT_IMAGES) {
+          throw new Error(`Maximum ${MAX_CONTENT_IMAGES} content images allowed.`);
+        }
+
+        // Validate each file size
+        files.forEach(validateFileSize);
+
+        setContentImages((prev) => [...prev, ...files]);
+        
+        files.forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            setContentImagePreviews((prev) => [...prev, reader.result]);
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+    } catch (err) {
+      setError(err.message);
+      e.target.value = '';
+    }
+  };
+
+  const validateForm = () => {
+    if (!formData.title.trim()) {
+      throw new Error('Title is required');
+    }
+    if (!formData.content.trim()) {
+      throw new Error('Content is required');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
     try {
+      // Validate form data
+      validateForm();
+
       const formDataToSend = new FormData();
-      formDataToSend.append('title', formData.title);
-      formDataToSend.append('content', formData.content);
+      formDataToSend.append('title', formData.title.trim());
+      formDataToSend.append('content', formData.content.trim());
 
       if (coverImage) {
         formDataToSend.append('coverImage', coverImage);
@@ -91,7 +135,17 @@ const BlogCreate = () => {
       navigate(`/blogs/${blog._id}`);
     } catch (err) {
       console.error('Error creating blog:', err);
-      setError(err.response?.data?.message || err.message || 'An error occurred while creating the blog');
+      if (err.response?.data?.errors) {
+        // Handle validation errors from the server
+        const errorMessages = err.response.data.errors
+          .map(error => error.msg)
+          .join(', ');
+        setError(errorMessages);
+      } else {
+        setError(err.response?.data?.message || err.message || 'An error occurred while creating the blog');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -103,9 +157,9 @@ const BlogCreate = () => {
             Create New Blog Post
           </Typography>
           {error && (
-            <Typography color="error" gutterBottom>
+            <Alert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Typography>
+            </Alert>
           )}
           <Box component="form" onSubmit={handleSubmit}>
             <TextField
@@ -118,6 +172,8 @@ const BlogCreate = () => {
               autoFocus
               value={formData.title}
               onChange={handleChange}
+              error={!!error && !formData.title.trim()}
+              helperText={error && !formData.title.trim() ? 'Title is required' : ''}
             />
 
             {/* Cover Image Upload */}
@@ -158,6 +214,8 @@ const BlogCreate = () => {
               rows={10}
               value={formData.content}
               onChange={handleChange}
+              error={!!error && !formData.content.trim()}
+              helperText={error && !formData.content.trim() ? 'Content is required' : ''}
             />
 
             {/* Content Images Upload */}
@@ -174,8 +232,9 @@ const BlogCreate = () => {
                 variant="outlined"
                 startIcon={<AddPhotoAlternate />}
                 onClick={() => contentImageInputRef.current?.click()}
+                disabled={contentImages.length >= MAX_CONTENT_IMAGES}
               >
-                Add Content Images
+                Add Content Images ({contentImages.length}/{MAX_CONTENT_IMAGES})
               </Button>
               <Box sx={{ mt: 2, display: 'flex', flexWrap: 'wrap', gap: 2 }}>
                 {contentImagePreviews.map((preview, index) => (
@@ -197,13 +256,15 @@ const BlogCreate = () => {
                 variant="contained"
                 color="primary"
                 size="large"
+                disabled={isSubmitting}
               >
-                Publish
+                {isSubmitting ? 'Publishing...' : 'Publish'}
               </Button>
               <Button
                 sx={{ ml: 2 }}
                 onClick={() => navigate('/')}
                 size="large"
+                disabled={isSubmitting}
               >
                 Cancel
               </Button>

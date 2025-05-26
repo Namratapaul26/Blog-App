@@ -8,6 +8,7 @@ import {
   Button,
   Box,
   Link,
+  Alert,
 } from '@mui/material';
 import { authAPI } from '../services/api';
 
@@ -32,33 +33,58 @@ const Login = () => {
 
     try {
       const response = await authAPI.login(formData);
+      
+      // Verify we got a token
+      if (!response.token) {
+        throw new Error('No token received from server');
+      }
+
+      // Store the token
       localStorage.setItem('token', response.token);
+      
+      // Verify token was stored correctly
+      const storedToken = localStorage.getItem('token');
+      if (!storedToken) {
+        throw new Error('Failed to store authentication token');
+      }
+
+      // Log successful login
+      console.log('Login successful:', {
+        tokenReceived: !!response.token,
+        tokenStored: !!storedToken
+      });
+
       navigate('/');
     } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred');
+      console.error('Login Error:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      
+      setError(
+        err.response?.data?.message || 
+        err.message || 
+        'An error occurred during login'
+      );
     }
   };
 
   return (
-    <Container maxWidth="xs">
-      <Box
-        sx={{
-          mt: 8,
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper sx={{ p: 4, width: '100%' }}>
-          <Typography component="h1" variant="h5" align="center" gutterBottom>
+    <Container maxWidth="sm">
+      <Box sx={{ mt: 4 }}>
+        <Paper sx={{ p: 4 }}>
+          <Typography component="h1" variant="h4" align="center" gutterBottom>
             Login
           </Typography>
+          
           {error && (
-            <Typography color="error" align="center" gutterBottom>
+            <Alert severity="error" sx={{ mb: 2 }}>
               {error}
-            </Typography>
+            </Alert>
           )}
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+
+          <Box component="form" onSubmit={handleSubmit}>
             <TextField
               margin="normal"
               required
@@ -91,7 +117,7 @@ const Login = () => {
             >
               Sign In
             </Button>
-            <Box sx={{ textAlign: 'center' }}>
+            <Box textAlign="center">
               <Link component={RouterLink} to="/signup" variant="body2">
                 {"Don't have an account? Sign Up"}
               </Link>
