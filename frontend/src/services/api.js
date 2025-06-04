@@ -20,9 +20,30 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    
+    // Ensure headers object exists
+    if (!config.headers) {
+      config.headers = {};
     }
+
+    if (token) {
+      config.headers['x-auth-token'] = token;
+    }
+
+    // For FormData, let the browser set the Content-Type
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+
+    // Log request details for debugging
+    console.log('API Request:', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers,
+      isFormData: config.data instanceof FormData,
+      hasToken: !!token
+    });
+
     return config;
   },
   (error) => {
