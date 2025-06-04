@@ -33,9 +33,6 @@ const BlogDetail = () => {
   const user = token ? JSON.parse(atob(token.split('.')[1])).user : null;
   const isAuthor = blog?.author?._id === user?.id;
 
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-  const BASE_URL = API_URL.replace('/api', '');
-
   useEffect(() => {
     const fetchBlog = async () => {
       try {
@@ -150,7 +147,7 @@ const BlogDetail = () => {
           {blog.coverImage && (
             <Box sx={{ mb: 4, borderRadius: 1, overflow: 'hidden' }}>
               <img
-                src={`${BASE_URL}${blog.coverImage}`}
+                src={blog.coverImage}
                 alt={blog.title}
                 style={{
                   width: '100%',
@@ -184,7 +181,7 @@ const BlogDetail = () => {
                 {blog.contentImages.map((image, index) => (
                   <ImageListItem key={index}>
                     <img
-                      src={`${BASE_URL}${image}`}
+                      src={image}
                       alt={`Blog content ${index + 1}`}
                       loading="lazy"
                       style={{

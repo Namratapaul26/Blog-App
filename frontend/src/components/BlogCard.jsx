@@ -11,9 +11,6 @@ import {
 import PropTypes from 'prop-types';
 
 const BlogCard = ({ blog }) => {
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-  const BASE_URL = API_URL.replace('/api', '');
-
   return (
     <Card 
       sx={{ 
@@ -31,7 +28,7 @@ const BlogCard = ({ blog }) => {
         <CardMedia
           component="img"
           height="200"
-          image={`${BASE_URL}${blog.coverImage}`}
+          image={blog.coverImage}
           alt={blog.title}
           sx={{
             objectFit: 'cover',

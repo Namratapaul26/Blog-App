@@ -1,8 +1,6 @@
 import axios from 'axios';
 
-const API_URL = process.env.NODE_ENV === 'production'
-  ? process.env.REACT_APP_API_URL
-  : 'http://localhost:5000/api';
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 console.log('API Configuration:', {
   environment: process.env.NODE_ENV,
@@ -14,68 +12,35 @@ console.log('API Configuration:', {
 const api = axios.create({
   baseURL: API_URL,
   headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
+    'Content-Type': 'application/json'
+  }
 });
 
-// Add token to requests if it exists
+// Add request interceptor to include auth token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    
-    // Ensure headers object exists
-    if (!config.headers) {
-      config.headers = {};
-    }
-
     if (token) {
-      config.headers['x-auth-token'] = token;
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
-
-    // For FormData, let the browser set the Content-Type
-    if (config.data instanceof FormData) {
-      delete config.headers['Content-Type'];
-    }
-
-    // Log request details
-    console.log('API Request:', {
-      url: config.url,
-      method: config.method,
-      baseURL: config.baseURL,
-      headers: config.headers,
-      isFormData: config.data instanceof FormData,
-      token: token ? 'present' : 'not present'
-    });
-
     return config;
   },
   (error) => {
-    console.error('Request Interceptor Error:', error);
     return Promise.reject(error);
   }
 );
 
-// Add response interceptor for error handling
+// Add response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => {
-    console.log('API Response:', {
-      url: response.config.url,
-      status: response.status,
-      data: response.data
-    });
-    return response;
-  },
+  (response) => response,
   (error) => {
     console.error('API Error:', {
       url: error.config?.url,
       method: error.config?.method,
       status: error.response?.status,
-      data: error.response?.data,
-      message: error.message,
-      headers: error.config?.headers
+      data: error.response?.data
     });
-    throw error;
+    return Promise.reject(error);
   }
 );
 
@@ -150,21 +115,16 @@ export const blogAPI = {
 
   createBlog: async (blogData) => {
     try {
-      // Log the FormData contents for debugging
-      if (blogData instanceof FormData) {
-        console.log('FormData contents:');
-        for (let [key, value] of blogData.entries()) {
-          console.log(key, value instanceof File ? value.name : value);
-        }
-      }
-
-      const response = await api.post('/blogs', blogData);
+      const response = await api.post('/blogs', blogData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       return response.data;
     } catch (error) {
       console.error('Create Blog Error:', {
         message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
+        response: error.response?.data
       });
       throw error;
     }
@@ -172,7 +132,11 @@ export const blogAPI = {
 
   updateBlog: async (id, blogData) => {
     try {
-      const response = await api.put(`/blogs/${id}`, blogData);
+      const response = await api.put(`/blogs/${id}`, blogData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
       return response.data;
     } catch (error) {
       console.error('Update Blog Error:', {
